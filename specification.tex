@@ -1,0 +1,48 @@
+\documentclass[a4paper,10pt]{report}
+\usepackage[utf8]{inputenc}
+
+% Title Page
+\title{Nuacomp - A modern cross-shell framework for generating completions}
+\author{Daniel O'Brien}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\chapter{Introduction}
+
+\section{Why is this needed}
+
+Shell completions in their current form are a mess. Different shells often require seperate completion programs. The amount of information conveyed from completions varies massively - along with how easy the completions are to interact with
+
+\section{Current state of the ecosystem}
+
+Most shells, such as fish and zsh support completions out of box. However bash, by far the most common shell and default on many platforms, doesn't and requires a third-party too called \texttt{bash-completion} to provide command completions.
+
+\section{The premise}
+
+At the core of this tool would be a specification that allows for the behaviour of a command to be documented in the form of a YAML schema file. Alongside this specification is a cross-platform tool that hooks into shells and provides completions for the current command.
+
+For this project to be considered a success, the following criteria should be met:
+\begin{itemize}
+ \item A JSON schema should be created for the specification itself. Assuming Rust is used as the language, crate \texttt{schemars} can be used to generate this schema from the code itself.
+ \item A schema parser/command completer should be produced. This should take the current user input at the prompt and use it to generate completions. Depending on the capabilities of the shell, it could also take the cursor position so that it is able to provide completions in places other than the end of the string.
+ \item Some form of web service for hosting schemas should be created. The most obvious form is a separate Git repository in order to facilitate user contributions. Optionally, the parser/completer could be configured to ping this service whenever completions for a command are not found. However, if the number of completions is small enough, all completions could be periodically downloaded by default.
+\end{itemize}
+
+\chapter{Implementation}
+
+\section{Shell Hooks}
+
+\subsection{Bash}
+
+Using the environment variable \texttt{COMP\_LINE} will return the current prompt input. \texttt{COMP\_POINT} returns the current cursor position.
+
+\subsection{Fish}
+
+\subsection{Zsh}
+
+\end{document}
