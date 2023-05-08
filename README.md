@@ -30,3 +30,5 @@ Nuacomp aims to plug the gap by providing a simple, human-readable framework for
 | Argument descriptions               |             |
 | Mutually exclusive arguments        |             |
 | Schema repository                   |             |
+| Automatic shell hooks               |             |
+| Clap integration                    |             |
