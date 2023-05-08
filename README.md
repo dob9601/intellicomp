@@ -1,5 +1,9 @@
-# What?
-- Generate completions based off of a specification
+# nuacomp
+
+> **Warning**
+> Still very early in development
+
+Generate cross-shell command-line completions based off of a YAML specification
 
 # Why?
 - Completions are a mess
