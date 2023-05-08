@@ -32,3 +32,4 @@ Nuacomp aims to plug the gap by providing a simple, human-readable framework for
 | Schema repository                   |             |
 | Automatic shell hooks               |             |
 | Clap integration                    |             |
+| Cool demo GIFs in the README        |             |
