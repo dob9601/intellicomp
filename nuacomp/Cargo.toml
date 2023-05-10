@@ -11,3 +11,4 @@ serde = { version = "1.0.162", features = ["derive"] }
 serde_yaml = "0.9.21"
 nuacomp-core = { path = "../nuacomp-core/" }
 itertools = "0.10.5"
+directories = "5.0.1"

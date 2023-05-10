@@ -12,6 +12,19 @@ The shell completion ecosystem right now is a mess. To summarise its current sta
 
 Nuacomp aims to plug the gap by providing a simple, human-readable framework for creating intelligent completions that can run on any shell - without the need to duplicate effort for different shells.
 
+## Installation
+
+Install the binary with `cargo install nuacomp` (or `cargo install --path .` when cd'd into the repo if building from git)
+
+### Bash
+
+Add the following hook to the end of your `~/.bashrc` file:
+
+```bash
+eval "$(nuacomp hook bash)"
+```
+
+
 ## Roadmap
 
 | Feature                             | Implemented |
@@ -29,7 +42,10 @@ Nuacomp aims to plug the gap by providing a simple, human-readable framework for
 | Subcommands                         |             |
 | Argument descriptions               |             |
 | Mutually exclusive arguments        |             |
-| Schema repository                   |             |
-| Automatic shell hooks               |             |
+| Schema repository                   |      ✔️     |
+| Automatic periodic schema updating  |             |
+| Bash shell hook                     |      ✔️     |
+| Fish shell hook                     |             |
+| Zsh  shell hook                     |             |
 | Clap integration                    |             |
 | Cool demo GIFs in the README        |             |

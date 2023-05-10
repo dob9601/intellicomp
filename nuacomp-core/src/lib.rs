@@ -229,11 +229,3 @@ enum Token<'a> {
     },
     PartialKeywordArgument(String),
 }
-
-// #[derive(Debug)]
-// enum State<'a> {
-//     IncompleteInput(String),
-//     PositionalArgument(&'a Argument),
-//     KeywordArgument(&'a Argument),
-//     Value(&'a Argument, String),
-// }
