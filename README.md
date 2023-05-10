@@ -24,6 +24,13 @@ Add the following hook to the end of your `~/.bashrc` file:
 eval "$(nuacomp hook bash)"
 ```
 
+### Fish
+
+Add the following hook to the end of your `~/.config/fish/config.fish` file:
+
+```fish
+nuacomp hook fish | source
+```
 
 ## Roadmap
 

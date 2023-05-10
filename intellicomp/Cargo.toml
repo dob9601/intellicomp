@@ -1,5 +1,5 @@
 [package]
-name = "nuacomp"
+name = "intellicomp"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,3 +12,4 @@ serde_yaml = "0.9.21"
 nuacomp-core = { path = "../nuacomp-core/" }
 itertools = "0.10.5"
 directories = "5.0.1"
+thiserror = "1.0.40"
