@@ -1,27 +1,26 @@
-use std::fs;
 use std::path::Path;
 
-use crate::IntellicompError;
+use crate::{CompletableShell, IntellicompError};
 
-pub fn generate_bash_completions(
-    schema_directory: &Path,
-    binary_location: &Path,
-) -> Result<(), IntellicompError> {
-    for schema_file in fs::read_dir(schema_directory)?.filter_map(|f| f.ok()) {
-        let file_name = schema_file.file_name().to_string_lossy().to_string();
+pub struct Bash;
 
-        let file_path = schema_file.path().to_string_lossy().to_string();
+impl CompletableShell for Bash {
+    fn generate_completions_from_schema(
+        schema_file: &Path,
+    ) -> Result<Vec<String>, IntellicompError> {
+        let command_name = schema_file
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .trim_end_matches(".yaml");
 
-        let command_name = file_name.strip_suffix(".yaml");
-
-        if let Some(command_name) = command_name {
-            println!(
-                "complete -C \"{} complete bash {file_path}\" {command_name}",
-                binary_location
-                    .to_str()
-                    .ok_or(IntellicompError::InvalidUnicodeInPath)?
-            );
-        }
+        Ok(vec![format!(
+            "complete -C \"{} complete bash {}\" {command_name}",
+            std::env::current_exe()?
+                .to_str()
+                .ok_or(IntellicompError::InvalidUnicodeInPath)?,
+            schema_file.to_string_lossy()
+        )])
     }
-    Ok(())
 }

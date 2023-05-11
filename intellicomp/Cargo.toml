@@ -13,3 +13,5 @@ nuacomp-core = { path = "../nuacomp-core/" }
 itertools = "0.10.5"
 directories = "5.0.1"
 thiserror = "1.0.40"
+git2 = "0.17.1"
+shlex = "1.1.0"

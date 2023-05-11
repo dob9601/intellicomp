@@ -179,8 +179,8 @@ pub struct Argument {
 
     pub arg_type: ArgumentType,
 
-    // TODO: Finalise the structure of this
-    pub incompatible_with: Vec<Argument>,
+    #[serde(default)]
+    pub incompatible_with: Vec<String>,
 }
 
 impl Argument {

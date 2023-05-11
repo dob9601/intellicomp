@@ -9,5 +9,8 @@ pub enum IntellicompError {
     FailedToSchemaDir(#[from] std::io::Error),
 
     #[error("IO Error: {0}")]
-    FailedToReadSchema(#[from] serde_yaml::Error)
+    FailedToReadSchema(#[from] serde_yaml::Error),
+
+    #[error("Failed to clone schemas repo: {0}")]
+    FailedToCloneSchemaRepo(#[from] git2::Error),
 }
