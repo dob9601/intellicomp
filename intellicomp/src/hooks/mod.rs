@@ -53,5 +53,5 @@ pub fn get_or_update_schema_dir() -> Result<PathBuf, IntellicompError> {
             schema_dir,
         )?;
     }
-    Ok(schema_dir.to_path_buf())
+    Ok(schema_dir.to_path_buf().join("schemas"))
 }
