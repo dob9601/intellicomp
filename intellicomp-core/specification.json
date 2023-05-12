@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Command",
+  "type": "object",
+  "required": [
+    "arguments_valid_anywhere",
+    "description"
+  ],
+  "properties": {
+    "arguments_valid_anywhere": {
+      "description": "Whether the top-level arguments above are valid anywhere in the command or must appear before any subcommands.\n\nIf true and a subcommand has an argument with a clashing name, undefined behaviour will occur.",
+      "type": "boolean"
+    },
+    "description": {
+      "description": "A brief overview of the command",
+      "type": "string"
+    },
+    "keyword_arguments": {
+      "description": "Any top-level arguments, including subcommands.",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Argument"
+      }
+    },
+    "positional_arguments": {
+      "description": "Any top-level arguments which are positional, i.e. passed by position as opposed to by flag.",
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Argument"
+      }
+    }
+  },
+  "definitions": {
+    "Argument": {
+      "type": "object",
+      "required": [
+        "arg_type",
+        "description",
+        "name",
+        "repeatable"
+      ],
+      "properties": {
+        "arg_type": {
+          "$ref": "#/definitions/ArgumentType"
+        },
+        "description": {
+          "type": "string"
+        },
+        "incompatible_with": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "repeatable": {
+          "type": "boolean"
+        },
+        "shorthand": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "ArgumentType": {
+      "oneOf": [
+        {
+          "description": "The argument is a flag and thus does not have an associated value.",
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "Flag"
+              ]
+            }
+          }
+        },
+        {
+          "description": "The value of the argument should be treated as a free-text string and no completion can be done for it.",
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "String"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "Path"
+              ]
+            }
+          }
+        },
+        {
+          "description": "The value of the argument must be one of a given set of strings.",
+          "type": "object",
+          "required": [
+            "content",
+            "type"
+          ],
+          "properties": {
+            "content": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "Enumeration"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-use nuacomp_core::Command;
+use intellicomp_core::Command;
 use schemars::schema_for;
 
 pub fn main() {

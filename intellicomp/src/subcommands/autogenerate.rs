@@ -1,11 +1,12 @@
 use std::{
+    collections::HashMap,
     ffi::OsStr,
     fs::File,
     io::{BufRead, BufReader},
 };
 
 use clap::Parser;
-use nuacomp_core::{Argument, ArgumentType, Command};
+use intellicomp_core::{Command, KeywordArgument, ValueType};
 
 use crate::{cli::AutogenerateArgs, IntellicompError};
 
@@ -26,7 +27,7 @@ pub fn run_autogenerate(args: AutogenerateArgs) -> Result<(), IntellicompError> 
             let buffer = BufReader::new(file);
             std::fs::create_dir_all(&args.output_directory)?;
 
-            let mut keyword_arguments = vec![];
+            let mut keyword_arguments: HashMap<String, KeywordArgument> = HashMap::new();
             let mut binary_name = None;
 
             for line in buffer.lines() {
@@ -56,21 +57,22 @@ pub fn run_autogenerate(args: AutogenerateArgs) -> Result<(), IntellicompError> 
 
                 binary_name = Some(args.command);
 
-                keyword_arguments.push(Argument {
+                keyword_arguments.insert(
                     name,
-                    description: args.description,
-                    shorthand: args.short_option,
-                    repeatable: false,
-                    arg_type: ArgumentType::String, // TODO: Can parse this better
-                    incompatible_with: vec![],
-                })
+                    KeywordArgument {
+                        description: args.description,
+                        shorthand: args.short_option,
+                        repeatable: false,
+                        value_type: ValueType::String, // TODO: Can parse this better
+                        incompatible_with: vec![],
+                    },
+                );
             }
 
             let command = Command {
                 description: "".into(),
                 keyword_arguments,
                 positional_arguments: vec![],
-                arguments_valid_anywhere: true,
             };
             let output_file = File::create(
                 args.output_directory

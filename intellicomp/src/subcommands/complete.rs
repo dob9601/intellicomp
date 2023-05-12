@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 
-use nuacomp_core::Command;
+use intellicomp_core::Command;
 
 use crate::cli::{CompleteArgs, Shell};
 

@@ -1,0 +1,39 @@
+description: Test description
+keyword_arguments:
+  - name: --testing
+    description: a test argument
+    repeatable: false
+    shorthand: -t
+    arg_type:
+      type: Enumeration
+      content:
+      - foo
+      - bar
+      - baz
+    incompatible_with: []
+  - name: --toasting
+    description: a test argument
+    repeatable: false
+    shorthand: -t
+    arg_type:
+      type: Enumeration
+      content:
+      - baz
+      - laz
+      - raz
+    incompatible_with: []
+  - name: --file
+    description: a test file argument
+    repeatable: false
+    shorthand: -f
+    arg_type:
+      type: Path
+    incompatible_with: []
+positional_arguments:
+  - name: positional-file
+    description: a test positional file argument
+    repeatable: false
+    arg_type:
+      type: Path
+    incompatible_with: []
+arguments_valid_anywhere: true

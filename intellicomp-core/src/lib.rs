@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use self::error::CommandParseError;
 
+mod argument;
+pub use argument::{KeywordArgument, PositionalArgument, ValueType};
 mod error;
 
 fn quotes_balanced(string: &str) -> bool {
@@ -36,19 +40,18 @@ pub struct Command {
 
     /// Any top-level arguments, including subcommands.
     #[serde(default)]
-    pub keyword_arguments: Vec<Argument>,
+    pub keyword_arguments: HashMap<String, KeywordArgument>,
 
     /// Any top-level arguments which are positional, i.e. passed by position as opposed to by
     /// flag.
     #[serde(default)]
-    pub positional_arguments: Vec<Argument>,
-
-    /// Whether the top-level arguments above are valid anywhere in the command or must appear
-    /// before any subcommands.
-    ///
-    /// If true and a subcommand has an argument with a clashing name, undefined behaviour will
-    /// occur.
-    pub arguments_valid_anywhere: bool,
+    pub positional_arguments: Vec<PositionalArgument>,
+    // / Whether the top-level arguments above are valid anywhere in the command or must appear
+    // / before any subcommands.
+    // /
+    // / If true and a subcommand has an argument with a clashing name, undefined behaviour will
+    // / occur.
+    // pub arguments_valid_anywhere: bool,
 }
 
 impl Command {
@@ -70,8 +73,12 @@ impl Command {
 
         let mut iterator = split_command.into_iter().skip(1);
         while let Some(token) = iterator.next() {
-            if let Some(argument) = self.keyword_arguments.iter().find(|arg| arg.name == token) {
-                if argument.arg_type == ArgumentType::Flag {
+            if let Some((name, argument)) = self
+                .keyword_arguments
+                .iter()
+                .find(|(name, _arg)| name == &&token)
+            {
+                if argument.value_type == ValueType::Flag {
                     continue;
                 }
 
@@ -80,18 +87,17 @@ impl Command {
                     .next()
                     .ok_or(CommandParseError::ArgumentMissingValue(token))?;
 
-                tokens.push(Token::PopulatedArgument {
+                tokens.push(Token::PopulatedKeywordArgument {
+                    name,
                     argument,
                     value,
-                    positional: false,
                 })
             } else if positional_argument_index < self.positional_arguments.len() {
                 let argument = &self.positional_arguments[positional_argument_index];
                 positional_argument_index += 1;
-                tokens.push(Token::PopulatedArgument {
+                tokens.push(Token::PopulatedPositionalArgument {
                     argument,
                     value: token,
-                    positional: true,
                 })
             } else {
                 tokens.push(Token::PartialKeywordArgument(token));
@@ -100,21 +106,28 @@ impl Command {
         }
 
         Ok(match tokens.last().unwrap() {
-            Token::PopulatedArgument {
+            Token::PopulatedKeywordArgument {
+                name: _,
                 argument,
                 value,
-                positional,
-            } => {
-                let mut results = vec![];
-                if *positional {
-                    results.extend(self.get_valid_keyword_arguments(&tokens, value))
-                }
+            } => match &argument.value_type {
+                ValueType::Flag => unreachable!(),
+                ValueType::String => vec![],
+                ValueType::Path => self.get_path_completions(value)?,
+                ValueType::Enumeration(values) => values
+                    .iter()
+                    .cloned()
+                    .filter(|member| member.starts_with(value))
+                    .collect::<Vec<String>>(),
+            },
+            Token::PopulatedPositionalArgument { argument, value } => {
+                let mut results = self.get_valid_keyword_arguments(&tokens, value);
 
-                match &argument.arg_type {
-                    ArgumentType::Flag => unreachable!(),
-                    ArgumentType::String => {}
-                    ArgumentType::Path => results.extend(self.get_path_completions(value)?),
-                    ArgumentType::Enumeration(values) => results.extend(
+                match &argument.value_type {
+                    ValueType::Flag => unreachable!(),
+                    ValueType::String => {}
+                    ValueType::Path => results.extend(self.get_path_completions(value)?),
+                    ValueType::Enumeration(values) => results.extend(
                         values
                             .iter()
                             .cloned()
@@ -134,17 +147,17 @@ impl Command {
     fn get_valid_keyword_arguments(&self, tokens: &[Token], query: &str) -> Vec<String> {
         self.keyword_arguments
             .iter()
-            .filter_map(|arg| {
-                if arg.name.starts_with(query) {
+            .filter_map(|(outer_name, arg)| {
+                if outer_name.starts_with(query) {
                     if !arg.repeatable
                         && tokens.iter().any(|token| {
-                            if let Token::PopulatedArgument {
+                            if let Token::PopulatedKeywordArgument {
+                                name,
                                 argument,
                                 value: _,
-                                positional: _,
                             } = token
                             {
-                                argument.name == arg.name
+                                name == outer_name
                             } else {
                                 false
                             }
@@ -152,7 +165,7 @@ impl Command {
                     {
                         return None;
                     }
-                    Some(arg.name.clone())
+                    Some(outer_name.clone())
                 } else {
                     None
                 }
@@ -169,63 +182,16 @@ impl Command {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-pub struct Argument {
-    pub name: String,
-    pub description: String,
-    pub shorthand: Option<String>,
-
-    pub repeatable: bool,
-
-    pub arg_type: ArgumentType,
-
-    #[serde(default)]
-    pub incompatible_with: Vec<String>,
-}
-
-impl Argument {
-    pub fn consume_iter<'a, I>(&self, iterator: &mut I) -> Result<Vec<&'a str>, CommandParseError>
-    where
-        I: Iterator<Item = &'a str>,
-    {
-        match &self.arg_type {
-            ArgumentType::Flag => Ok(vec![]),
-            ArgumentType::String => Ok(vec![iterator
-                .next()
-                .ok_or(CommandParseError::ArgumentMissingValue(self.name.clone()))?]),
-            ArgumentType::Path => todo!(),
-            ArgumentType::Enumeration(_) => todo!(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-#[serde(tag = "type", content = "content")]
-#[non_exhaustive]
-pub enum ArgumentType {
-    /// The argument is a flag and thus does not have an associated value.
-    Flag,
-
-    /// The value of the argument should be treated as a free-text string and no completion can be
-    /// done for it.
-    String,
-
-    Path,
-
-    /// The value of the argument must be one of a given set of strings.
-    Enumeration(Vec<String>),
-    // Subcommand {
-    //     keyword_arguments: Vec<Argument>,
-    //     positional_arguments: Vec<Argument>,
-    // },
-}
-
 #[derive(Debug)]
 enum Token<'a> {
-    PopulatedArgument {
-        argument: &'a Argument,
+    PopulatedKeywordArgument {
+        name: &'a str,
+        argument: &'a KeywordArgument,
         value: String,
-        positional: bool,
+    },
+    PopulatedPositionalArgument {
+        argument: &'a PositionalArgument,
+        value: String,
     },
     PartialKeywordArgument(String),
 }

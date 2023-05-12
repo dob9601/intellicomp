@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use nuacomp_core::Command;
+use intellicomp_core::Command;
 
 use crate::{CompletableShell, IntellicompError};
 
@@ -21,15 +21,14 @@ impl CompletableShell for Fish {
         if let Some(command_name) = command_name {
             let base_command = format!("complete -c {command_name}");
 
-            for argument in schema.keyword_arguments {
-                let argument_name = argument.name.trim_start_matches('-');
+            for (name, argument) in schema.keyword_arguments {
                 let description = argument.description;
 
-                let mut command = format!("{base_command} -l {argument_name} -d \'{description}\'");
+                let mut command = format!("{base_command} -l '{name}' -d \'{description}\'");
 
                 if let Some(shorthand) = argument.shorthand {
                     let shorthand = shorthand.trim_start_matches('-');
-                    command = format!("{command} -s {shorthand}")
+                    command = format!("{command} -s '{shorthand}'")
                 }
 
                 completion_commands.push(command);
