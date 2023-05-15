@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use lexer::parse_words;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -9,29 +8,7 @@ mod argument;
 pub use argument::{KeywordArgument, PositionalArgument, ValueType};
 mod error;
 
-fn quotes_balanced(string: &str) -> bool {
-    let mut double_balanced = true;
-    let mut single_balanced = true;
-
-    for char in string.chars() {
-        if char == '\'' {
-            single_balanced = !single_balanced
-        } else if char == '\"' {
-            double_balanced = !double_balanced
-        }
-    }
-
-    double_balanced && single_balanced
-}
-
-fn parse_words(command: &str) -> Vec<String> {
-    let new_word_started = command.ends_with(' ') && quotes_balanced(command);
-    let mut split_command = shlex::split(command).unwrap();
-    if new_word_started {
-        split_command.push("".to_string());
-    }
-    split_command
-}
+mod lexer;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Command {
@@ -40,7 +17,7 @@ pub struct Command {
 
     /// Any top-level arguments, including subcommands.
     #[serde(default)]
-    pub keyword_arguments: HashMap<String, KeywordArgument>,
+    pub keyword_arguments: Vec<KeywordArgument>,
 
     /// Any top-level arguments which are positional, i.e. passed by position as opposed to by
     /// flag.
@@ -66,17 +43,17 @@ impl Command {
 
         let (command, _) = command.split_at(cursor_position);
 
-        let split_command = parse_words(command);
+        let split_command = parse_words(command.to_string())?;
         let mut tokens: Vec<Token> = vec![];
 
         let mut positional_argument_index = 0;
 
         let mut iterator = split_command.into_iter().skip(1);
         while let Some(token) = iterator.next() {
-            if let Some((name, argument)) = self
+            if let Some(argument) = self
                 .keyword_arguments
                 .iter()
-                .find(|(name, _arg)| name == &&token)
+                .find(|arg| arg.name == token.trim_start_matches("-"))
             {
                 if argument.value_type == ValueType::Flag {
                     continue;
@@ -87,11 +64,7 @@ impl Command {
                     .next()
                     .ok_or(CommandParseError::ArgumentMissingValue(token))?;
 
-                tokens.push(Token::PopulatedKeywordArgument {
-                    name,
-                    argument,
-                    value,
-                })
+                tokens.push(Token::PopulatedKeywordArgument { argument, value })
             } else if positional_argument_index < self.positional_arguments.len() {
                 let argument = &self.positional_arguments[positional_argument_index];
                 positional_argument_index += 1;
@@ -100,17 +73,17 @@ impl Command {
                     value: token,
                 })
             } else {
-                tokens.push(Token::PartialKeywordArgument(token));
+                tokens.push(Token::PartialKeywordArgument(
+                    token.trim_start_matches('-').to_string(),
+                ));
                 continue;
             };
         }
 
+        dbg!(&tokens);
+
         Ok(match tokens.last().unwrap() {
-            Token::PopulatedKeywordArgument {
-                name: _,
-                argument,
-                value,
-            } => match &argument.value_type {
+            Token::PopulatedKeywordArgument { argument, value } => match &argument.value_type {
                 ValueType::Flag => unreachable!(),
                 ValueType::String => vec![],
                 ValueType::Path => self.get_path_completions(value)?,
@@ -147,17 +120,12 @@ impl Command {
     fn get_valid_keyword_arguments(&self, tokens: &[Token], query: &str) -> Vec<String> {
         self.keyword_arguments
             .iter()
-            .filter_map(|(outer_name, arg)| {
-                if outer_name.starts_with(query) {
-                    if !arg.repeatable
+            .filter_map(|outer_argument| {
+                if outer_argument.name.starts_with(query) {
+                    if !outer_argument.repeatable
                         && tokens.iter().any(|token| {
-                            if let Token::PopulatedKeywordArgument {
-                                name,
-                                argument,
-                                value: _,
-                            } = token
-                            {
-                                name == outer_name
+                            if let Token::PopulatedKeywordArgument { argument, value: _ } = token {
+                                argument.name == outer_argument.name
                             } else {
                                 false
                             }
@@ -165,7 +133,7 @@ impl Command {
                     {
                         return None;
                     }
-                    Some(outer_name.clone())
+                    Some(outer_argument.to_string())
                 } else {
                     None
                 }
@@ -185,7 +153,6 @@ impl Command {
 #[derive(Debug)]
 enum Token<'a> {
     PopulatedKeywordArgument {
-        name: &'a str,
         argument: &'a KeywordArgument,
         value: String,
     },
@@ -194,4 +161,98 @@ enum Token<'a> {
         value: String,
     },
     PartialKeywordArgument(String),
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{
+        argument::KeywordArgumentStyle, error::CommandParseError, Command, KeywordArgument,
+        PositionalArgument, ValueType,
+    };
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        static ref MOCK_COMMAND: Command = Command {
+            description: "This is a mock command used for testing".to_string(),
+            keyword_arguments: vec![KeywordArgument {
+                name: "flag".to_string(),
+                description: "Some argument".to_string(),
+                incompatible_with: vec![],
+                style: KeywordArgumentStyle::Standard,
+                repeatable: false,
+                shorthand: Some('s'),
+                value_type: ValueType::Enumeration(vec![
+                    "foo".to_string(),
+                    "bar".to_string(),
+                    "baz".to_string()
+                ])
+            }],
+            positional_arguments: vec![PositionalArgument {
+                name: "positional".to_string(),
+                description: "Some positional argument".to_string(),
+                value_type: ValueType::Enumeration(vec![
+                    "1".to_string(),
+                    "2".to_string(),
+                    "3".to_string()
+                ]),
+                incompatible_with: vec![]
+            }],
+        };
+    }
+
+    #[test]
+    fn test_generate_enum_completions() {
+        let command = "command-name --flag ";
+        let completions = MOCK_COMMAND
+            .generate_completions(command, command.len())
+            .unwrap();
+
+        assert_eq!(completions.as_ref(), vec!["foo", "bar", "baz"])
+    }
+
+    #[test]
+    fn test_generate_keyword_and_positional_completions() {
+        let command = "command-name ";
+        let completions = MOCK_COMMAND
+            .generate_completions(command, command.len())
+            .unwrap();
+
+        assert_eq!(completions.as_ref(), vec!["--flag", "1", "2", "3"])
+    }
+
+    #[test]
+    fn test_generate_keyword_completions() {
+        let command = "command-name 1 --fl";
+        let completions = MOCK_COMMAND
+            .generate_completions(command, command.len())
+            .unwrap();
+
+        assert_eq!(completions.as_ref(), vec!["--flag"])
+    }
+
+    #[test]
+    fn test_provide_completions_from_partial_argument() {
+        let command = "command-name --flag ba";
+        let completions = MOCK_COMMAND
+            .generate_completions(command, command.len())
+            .unwrap();
+
+        assert_eq!(completions.as_ref(), vec!["bar", "baz"])
+    }
+
+    #[test]
+    fn test_cursor_out_of_range() {
+        let command = "command-name --flag ";
+        let index = command.len() + 1;
+        let error = MOCK_COMMAND
+            .generate_completions(command, index)
+            .unwrap_err();
+
+        if let CommandParseError::CursorOutOfRange(position) = error {
+            assert_eq!(position, index)
+        } else {
+            panic!("Wrong error variant: {error:?}")
+        }
+    }
 }

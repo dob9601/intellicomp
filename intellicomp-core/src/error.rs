@@ -8,6 +8,9 @@ pub enum CommandParseError {
     #[error("The command input is invalid")]
     InvalidCommandInput,
 
+    #[error("The provided command could not be parsed.")]
+    UnparseableCommand,
+
     #[error("The argument {0} is missing a value")]
     ArgumentMissingValue(String),
 
@@ -15,5 +18,5 @@ pub enum CommandParseError {
     UnexpectedToken(String),
 
     #[error("IOError: {0}")]
-    IOError(#[from] glob::GlobError)
+    IOError(#[from] glob::GlobError),
 }
