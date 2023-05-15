@@ -175,19 +175,30 @@ mod tests {
     lazy_static! {
         static ref MOCK_COMMAND: Command = Command {
             description: "This is a mock command used for testing".to_string(),
-            keyword_arguments: vec![KeywordArgument {
-                name: "flag".to_string(),
-                description: "Some argument".to_string(),
-                incompatible_with: vec![],
-                style: KeywordArgumentStyle::Standard,
-                repeatable: false,
-                shorthand: Some('s'),
-                value_type: ValueType::Enumeration(vec![
-                    "foo".to_string(),
-                    "bar".to_string(),
-                    "baz".to_string()
-                ])
-            }],
+            keyword_arguments: vec![
+                KeywordArgument {
+                    name: "enum".to_string(),
+                    description: "Some argument".to_string(),
+                    incompatible_with: vec![],
+                    style: KeywordArgumentStyle::Standard,
+                    repeatable: false,
+                    shorthand: Some('s'),
+                    value_type: ValueType::Enumeration(vec![
+                        "foo".to_string(),
+                        "bar".to_string(),
+                        "baz".to_string()
+                    ]),
+                },
+                KeywordArgument {
+                    name: "file".to_string(),
+                    description: "Some argument".to_string(),
+                    incompatible_with: vec![],
+                    style: KeywordArgumentStyle::Standard,
+                    repeatable: false,
+                    shorthand: Some('s'),
+                    value_type: ValueType::Path,
+                }
+            ],
             positional_arguments: vec![PositionalArgument {
                 name: "positional".to_string(),
                 description: "Some positional argument".to_string(),
@@ -203,12 +214,39 @@ mod tests {
 
     #[test]
     fn test_generate_enum_completions() {
-        let command = "command-name --flag ";
+        let command = "command-name --enum ";
         let completions = MOCK_COMMAND
             .generate_completions(command, command.len())
             .unwrap();
 
         assert_eq!(completions.as_ref(), vec!["foo", "bar", "baz"])
+    }
+
+    #[test]
+    fn test_generate_file_completions() {
+        let command = "command-name --file ";
+        let mut completions = MOCK_COMMAND
+            .generate_completions(command, command.len())
+            .unwrap();
+
+        let mut expected = std::fs::read_dir("./")
+            .unwrap()
+            .map(|path| {
+                path.map(|path| {
+                    path.path()
+                        .to_string_lossy()
+                        .strip_prefix("./")
+                        .unwrap()
+                        .to_string()
+                })
+            })
+            .collect::<Result<Vec<String>, _>>()
+            .unwrap();
+
+        completions.sort();
+        expected.sort();
+
+        assert_eq!(completions, expected)
     }
 
     #[test]
@@ -218,32 +256,34 @@ mod tests {
             .generate_completions(command, command.len())
             .unwrap();
 
-        assert_eq!(completions.as_ref(), vec!["--flag", "1", "2", "3"])
+        assert_eq!(
+            completions.as_ref(),
+            vec!["--enum", "--file", "1", "2", "3"]
+        )
     }
 
     #[test]
     fn test_generate_keyword_completions() {
-        let command = "command-name 1 --fl";
+        let command = "command-name 1 --";
         let completions = MOCK_COMMAND
             .generate_completions(command, command.len())
             .unwrap();
 
-        assert_eq!(completions.as_ref(), vec!["--flag"])
+        assert_eq!(completions.as_ref(), vec!["--enum", "--file"])
     }
 
     #[test]
     fn test_provide_completions_from_partial_argument() {
-        let command = "command-name --flag ba";
+        let command = "command-name --enum ba";
         let completions = MOCK_COMMAND
             .generate_completions(command, command.len())
             .unwrap();
 
         assert_eq!(completions.as_ref(), vec!["bar", "baz"])
     }
-
     #[test]
     fn test_cursor_out_of_range() {
-        let command = "command-name --flag ";
+        let command = "command-name --enum ";
         let index = command.len() + 1;
         let error = MOCK_COMMAND
             .generate_completions(command, index)
