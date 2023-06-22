@@ -6,7 +6,7 @@ use std::{
 };
 
 use clap::Parser;
-use intellicomp_core::{Command, KeywordArgument, ValueType};
+use intellicomp_core::{Command, KeywordArgument, KeywordArgumentStyle, ValueType};
 
 use crate::{cli::AutogenerateArgs, IntellicompError};
 
@@ -27,7 +27,7 @@ pub fn run_autogenerate(args: AutogenerateArgs) -> Result<(), IntellicompError> 
             let buffer = BufReader::new(file);
             std::fs::create_dir_all(&args.output_directory)?;
 
-            let mut keyword_arguments: HashMap<String, KeywordArgument> = HashMap::new();
+            let mut keyword_arguments = vec![];
             let mut binary_name = None;
 
             for line in buffer.lines() {
@@ -50,23 +50,22 @@ pub fn run_autogenerate(args: AutogenerateArgs) -> Result<(), IntellicompError> 
                     s
                 } else if let Some(s) = args.short_option {
                     args.short_option = None;
-                    s
+                    s.to_string()
                 } else {
                     panic!("Missing a name: {line}")
                 };
 
                 binary_name = Some(args.command);
 
-                keyword_arguments.insert(
+                keyword_arguments.push(KeywordArgument {
                     name,
-                    KeywordArgument {
-                        description: args.description,
-                        shorthand: args.short_option,
-                        repeatable: false,
-                        value_type: ValueType::String, // TODO: Can parse this better
-                        incompatible_with: vec![],
-                    },
-                );
+                    style: KeywordArgumentStyle::Standard, // FIXME: Don't default to standard here.
+                    description: args.description,
+                    shorthand: args.short_option,
+                    repeatable: false,
+                    value_type: ValueType::String, // TODO: Can parse this better
+                    incompatible_with: vec![],
+                });
             }
 
             let command = Command {
@@ -93,7 +92,7 @@ pub struct FishCompleteParser {
     command: String,
 
     #[arg(long, short)]
-    short_option: Option<String>,
+    short_option: Option<char>,
 
     #[arg(long, short)]
     long_option: Option<String>,

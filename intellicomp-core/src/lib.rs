@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use self::error::CommandParseError;
 
 mod argument;
-pub use argument::{KeywordArgument, PositionalArgument, ValueType};
+pub use argument::{KeywordArgument, KeywordArgumentStyle, PositionalArgument, ValueType};
 mod error;
 
 mod lexer;

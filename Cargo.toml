@@ -2,5 +2,6 @@
 
 members = [
     "intellicomp",
-    "intellicomp-core"
+    "intellicomp-core",
+    "intellicomp-generate"
 ]

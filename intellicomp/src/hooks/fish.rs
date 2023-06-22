@@ -21,13 +21,13 @@ impl CompletableShell for Fish {
         if let Some(command_name) = command_name {
             let base_command = format!("complete -c {command_name}");
 
-            for (name, argument) in schema.keyword_arguments {
+            for argument in schema.keyword_arguments {
                 let description = argument.description;
 
-                let mut command = format!("{base_command} -l '{name}' -d \'{description}\'");
+                let mut command =
+                    format!("{base_command} -l '{}' -d \'{description}\'", argument.name);
 
                 if let Some(shorthand) = argument.shorthand {
-                    let shorthand = shorthand.trim_start_matches('-');
                     command = format!("{command} -s '{shorthand}'")
                 }
 
