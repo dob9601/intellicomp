@@ -1,4 +1,4 @@
-# Nuacomp
+# Intellicomp
 
 > **Warning**
 > Early in development
